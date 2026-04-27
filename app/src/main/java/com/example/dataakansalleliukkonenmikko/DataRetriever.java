@@ -21,7 +21,8 @@ public class DataRetriever {
                 statisticsData.getWorkplaceSelfSufficiency(),
                 statisticsData.getEmploymentRate(),
                 weatherData.getTemperature(),
-                weatherData.getDescription()
+                weatherData.getDescription(),
+                weatherData.getIconCode()
         );
     }
 }

@@ -33,8 +33,9 @@ public class WeatherRetriever {
         JSONArray weatherArray = root.getJSONArray("weather");
         JSONObject weatherObject = weatherArray.getJSONObject(0);
         String description = weatherObject.getString("description");
+        String iconCode = weatherObject.getString("icon");
 
-        return new WeatherData(temperature, description);
+        return new WeatherData(temperature, description, iconCode);
     }
 
     private String getJsonFromUrl(String urlString) throws Exception {

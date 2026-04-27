@@ -9,6 +9,7 @@ public class MunicipalityData {
     private double employmentRate;
     private double temperature;
     private String weatherDescription;
+    private String weatherIconCode;
 
     public MunicipalityData(String name,
                             int population,
@@ -16,7 +17,8 @@ public class MunicipalityData {
                             double workplaceSelfSufficiency,
                             double employmentRate,
                             double temperature,
-                            String weatherDescription) {
+                            String weatherDescription,
+                            String weatherIconCode) {
         this.name = name;
         this.population = population;
         this.populationChange = populationChange;
@@ -24,6 +26,7 @@ public class MunicipalityData {
         this.employmentRate = employmentRate;
         this.temperature = temperature;
         this.weatherDescription = weatherDescription;
+        this.weatherIconCode = weatherIconCode;
     }
 
     public String getName() {
@@ -52,5 +55,9 @@ public class MunicipalityData {
 
     public String getWeatherDescription() {
         return weatherDescription;
+    }
+
+    public String getWeatherIconCode() {
+        return weatherIconCode;
     }
 }
