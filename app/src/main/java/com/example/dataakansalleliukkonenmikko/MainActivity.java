@@ -1,5 +1,11 @@
 package com.example.dataakansalleliukkonenmikko;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.view.View;
+import android.widget.ImageView;
 
+import java.io.InputStream;
+import java.net.URL;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewResult;
     private RecyclerView recyclerViewData;
     private LinearLayout layoutSearchHistory;
+    private ImageView imageViewWeatherIcon;
 
     private DataRetriever dataRetriever;
     private DataItemAdapter dataItemAdapter;
@@ -37,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         textViewResult = findViewById(R.id.textViewResult);
         recyclerViewData = findViewById(R.id.recyclerViewData);
         layoutSearchHistory = findViewById(R.id.layoutSearchHistory);
+        imageViewWeatherIcon = findViewById(R.id.imageViewWeatherIcon);
 
         dataRetriever = new DataRetriever();
         searchHistoryManager = new SearchHistoryManager(this);
@@ -56,23 +64,62 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void searchMunicipalityData(String municipalityName) {
-        if (municipalityName.isEmpty()) {
-            textViewResult.setText("Kirjoita kunnan nimi.");
-            dataItemAdapter.updateData(new ArrayList<>());
-            return;
-        }
-
         textViewResult.setText("Haetaan tietoja...");
-        dataItemAdapter.updateData(new ArrayList<>());
+
+        if (imageViewWeatherIcon != null) {
+            imageViewWeatherIcon.setVisibility(View.GONE);
+            imageViewWeatherIcon.setImageDrawable(null);
+        }
 
         new Thread(() -> {
             try {
                 MunicipalityData data = dataRetriever.getMunicipalityData(municipalityName);
-                List<DataItem> newDataItems = createDataItems(data);
+
+                Bitmap weatherIcon = loadWeatherIcon(data.getWeatherIconCode());
+
+                ArrayList<DataItem> newDataItems = new ArrayList<>();
+
+                newDataItems.add(new DataItem(
+                        "Väkiluku",
+                        String.valueOf(data.getPopulation())
+                ));
+
+                newDataItems.add(new DataItem(
+                        "Väestönlisäys",
+                        String.valueOf(data.getPopulationChange())
+                ));
+
+                newDataItems.add(new DataItem(
+                        "Työpaikkaomavaraisuus",
+                        data.getWorkplaceSelfSufficiency() + " %"
+                ));
+
+                newDataItems.add(new DataItem(
+                        "Työllisyysaste",
+                        data.getEmploymentRate() + " %"
+                ));
+
+                newDataItems.add(new DataItem(
+                        "Lämpötila",
+                        data.getTemperature() + " °C"
+                ));
+
+                newDataItems.add(new DataItem(
+                        "Sää",
+                        data.getWeatherDescription()
+                ));
 
                 runOnUiThread(() -> {
                     textViewResult.setText(data.getName());
                     dataItemAdapter.updateData(newDataItems);
+
+                    if (weatherIcon != null) {
+                        imageViewWeatherIcon.setImageBitmap(weatherIcon);
+                        imageViewWeatherIcon.setVisibility(View.VISIBLE);
+                    } else {
+                        imageViewWeatherIcon.setImageDrawable(null);
+                        imageViewWeatherIcon.setVisibility(View.GONE);
+                    }
 
                     searchHistoryManager.saveMunicipality(data.getName());
                     updateSearchHistoryButtons();
@@ -82,6 +129,11 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     textViewResult.setText("Tietojen haku epäonnistui.");
                     dataItemAdapter.updateData(createErrorItems(e));
+
+                    if (imageViewWeatherIcon != null) {
+                        imageViewWeatherIcon.setImageDrawable(null);
+                        imageViewWeatherIcon.setVisibility(View.GONE);
+                    }
                 });
             }
         }).start();
@@ -145,6 +197,21 @@ public class MainActivity extends AppCompatActivity {
         items.add(new DataItem("Sää", data.getWeatherDescription()));
 
         return items;
+    }
+    private Bitmap loadWeatherIcon(String iconCode) {
+        try {
+            if (iconCode == null || iconCode.isEmpty()) {
+                return null;
+            }
+
+            String iconUrl = "https://openweathermap.org/img/wn/" + iconCode + "@2x.png";
+            InputStream inputStream = new URL(iconUrl).openStream();
+            return BitmapFactory.decodeStream(inputStream);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private List<DataItem> createErrorItems(Exception e) {

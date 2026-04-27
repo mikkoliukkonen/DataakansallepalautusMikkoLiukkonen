@@ -1,7 +1,6 @@
 package com.example.dataakansalleliukkonenmikko;
 
 public class MunicipalityData {
-
     private String name;
     private int population;
     private int populationChange;
@@ -11,14 +10,16 @@ public class MunicipalityData {
     private String weatherDescription;
     private String weatherIconCode;
 
-    public MunicipalityData(String name,
-                            int population,
-                            int populationChange,
-                            double workplaceSelfSufficiency,
-                            double employmentRate,
-                            double temperature,
-                            String weatherDescription,
-                            String weatherIconCode) {
+    public MunicipalityData(
+            String name,
+            int population,
+            int populationChange,
+            double workplaceSelfSufficiency,
+            double employmentRate,
+            double temperature,
+            String weatherDescription,
+            String weatherIconCode
+    ) {
         this.name = name;
         this.population = population;
         this.populationChange = populationChange;

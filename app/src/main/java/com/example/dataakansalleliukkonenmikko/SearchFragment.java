@@ -12,8 +12,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,40 +19,37 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 public class SearchFragment extends Fragment {
-
     private EditText editTextMunicipality;
     private Button buttonSearch;
-    private TextView textViewResult;
-    private RecyclerView recyclerViewData;
     private LinearLayout layoutSearchHistory;
+    private TextView textViewResult;
     private ImageView imageViewWeatherIcon;
+    private RecyclerView recyclerViewData;
 
     private DataRetriever dataRetriever;
-    private DataItemAdapter dataItemAdapter;
-    private List<DataItem> dataItems;
     private SearchHistoryManager searchHistoryManager;
+    private DataItemAdapter dataItemAdapter;
+    private ArrayList<DataItem> dataItems;
 
     public SearchFragment() {
     }
 
-    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
-
+    public View onCreateView(
+            LayoutInflater inflater,
+            ViewGroup container,
+            Bundle savedInstanceState
+    ) {
         View view = inflater.inflate(R.layout.fragment_search, container, false);
 
         editTextMunicipality = view.findViewById(R.id.editTextMunicipality);
         buttonSearch = view.findViewById(R.id.buttonSearch);
-        textViewResult = view.findViewById(R.id.textViewResult);
-        recyclerViewData = view.findViewById(R.id.recyclerViewData);
         layoutSearchHistory = view.findViewById(R.id.layoutSearchHistory);
+        textViewResult = view.findViewById(R.id.textViewResult);
         imageViewWeatherIcon = view.findViewById(R.id.imageViewWeatherIcon);
+        recyclerViewData = view.findViewById(R.id.recyclerViewData);
 
         dataRetriever = new DataRetriever();
         searchHistoryManager = new SearchHistoryManager(requireContext());
@@ -65,93 +60,91 @@ public class SearchFragment extends Fragment {
         recyclerViewData.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerViewData.setAdapter(dataItemAdapter);
 
+        updateSearchHistoryButtons();
+
         buttonSearch.setOnClickListener(v -> {
             String municipalityName = editTextMunicipality.getText().toString().trim();
-            searchMunicipalityData(municipalityName);
-        });
 
-        updateSearchHistoryButtons();
+            if (!municipalityName.isEmpty()) {
+                searchMunicipality(municipalityName);
+            }
+        });
 
         return view;
     }
 
-    private void searchMunicipalityData(String municipalityName) {
-        if (municipalityName.isEmpty()) {
-            textViewResult.setText("Kirjoita kunnan nimi.");
-            dataItemAdapter.updateData(new ArrayList<>());
-            imageViewWeatherIcon.setVisibility(View.GONE);
-            return;
-        }
-
+    private void searchMunicipality(String municipalityName) {
         textViewResult.setText("Haetaan tietoja...");
-        dataItemAdapter.updateData(new ArrayList<>());
         imageViewWeatherIcon.setVisibility(View.GONE);
+        dataItems.clear();
+        dataItemAdapter.notifyDataSetChanged();
 
         new Thread(() -> {
-            try {
-                MunicipalityData data = dataRetriever.getMunicipalityData(municipalityName);
-                List<DataItem> newDataItems = createDataItems(data);
-                Bitmap weatherIcon = loadWeatherIcon(data.getWeatherIconCode());
+            MunicipalityData municipalityData = dataRetriever.getMunicipalityData(municipalityName);
 
-                if (getActivity() == null) {
-                    return;
-                }
+            System.out.println("ICON CODE: " + municipalityData.getWeatherIconCode());
 
-                requireActivity().runOnUiThread(() -> {
-                    textViewResult.setText(data.getName());
-                    dataItemAdapter.updateData(newDataItems);
+            Bitmap weatherIcon = loadWeatherIcon(municipalityData.getWeatherIconCode());
 
-                    if (weatherIcon != null) {
-                        imageViewWeatherIcon.setImageBitmap(weatherIcon);
-                        imageViewWeatherIcon.setVisibility(View.VISIBLE);
-                    } else {
-                        imageViewWeatherIcon.setVisibility(View.GONE);
-                    }
+            requireActivity().runOnUiThread(() -> {
+                textViewResult.setText(municipalityData.getName());
 
-                    searchHistoryManager.saveMunicipality(data.getName());
-                    updateSearchHistoryButtons();
-                });
+                dataItems.clear();
 
-            } catch (Exception e) {
-                if (getActivity() == null) {
-                    return;
-                }
+                dataItems.add(new DataItem(
+                        "Väkiluku",
+                        String.valueOf(municipalityData.getPopulation())
+                ));
 
-                requireActivity().runOnUiThread(() -> {
-                    textViewResult.setText("Tietojen haku epäonnistui.");
-                    dataItemAdapter.updateData(createErrorItems(e));
+                dataItems.add(new DataItem(
+                        "Väestönlisäys",
+                        String.valueOf(municipalityData.getPopulationChange())
+                ));
+
+                dataItems.add(new DataItem(
+                        "Työpaikkaomavaraisuus",
+                        municipalityData.getWorkplaceSelfSufficiency() + " %"
+                ));
+
+                dataItems.add(new DataItem(
+                        "Työllisyysaste",
+                        municipalityData.getEmploymentRate() + " %"
+                ));
+
+                dataItems.add(new DataItem(
+                        "Lämpötila",
+                        municipalityData.getTemperature() + " °C"
+                ));
+
+                dataItems.add(new DataItem(
+                        "Sää",
+                        municipalityData.getWeatherDescription()
+                ));
+
+                dataItemAdapter.notifyDataSetChanged();
+
+                if (weatherIcon != null) {
+                    imageViewWeatherIcon.setImageBitmap(weatherIcon);
+                    imageViewWeatherIcon.setVisibility(View.VISIBLE);
+                } else {
+                    imageViewWeatherIcon.setImageDrawable(null);
                     imageViewWeatherIcon.setVisibility(View.GONE);
-                });
-            }
-        }).start();
-    }
+                }
 
-    private Bitmap loadWeatherIcon(String iconCode) {
-        try {
-            String iconUrl = "https://openweathermap.org/img/wn/" + iconCode + "@2x.png";
-            InputStream inputStream = new URL(iconUrl).openStream();
-            return BitmapFactory.decodeStream(inputStream);
-        } catch (Exception e) {
-            return null;
-        }
+                searchHistoryManager.addMunicipality(municipalityData.getName());
+                updateSearchHistoryButtons();
+            });
+        }).start();
     }
 
     private void updateSearchHistoryButtons() {
         layoutSearchHistory.removeAllViews();
 
-        List<String> history = searchHistoryManager.getHistory();
+        ArrayList<String> history = searchHistoryManager.getSearchHistory();
 
-        if (history.isEmpty()) {
-            TextView emptyText = new TextView(requireContext());
-            emptyText.setText("Ei vielä hakuja");
-            emptyText.setTextSize(14);
-            layoutSearchHistory.addView(emptyText);
-            return;
-        }
-
-        for (String municipalityName : history) {
+        for (String municipality : history) {
             Button historyButton = new Button(requireContext());
-            historyButton.setText(municipalityName);
+            historyButton.setText(municipality);
 
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -162,44 +155,27 @@ public class SearchFragment extends Fragment {
             historyButton.setLayoutParams(params);
 
             historyButton.setOnClickListener(v -> {
-                editTextMunicipality.setText(municipalityName);
-                searchMunicipalityData(municipalityName);
+                editTextMunicipality.setText(municipality);
+                searchMunicipality(municipality);
             });
 
             layoutSearchHistory.addView(historyButton);
         }
     }
 
-    private List<DataItem> createDataItems(MunicipalityData data) {
-        List<DataItem> items = new ArrayList<>();
+    private Bitmap loadWeatherIcon(String iconCode) {
+        try {
+            if (iconCode == null || iconCode.isEmpty()) {
+                return null;
+            }
 
-        items.add(new DataItem("Väkiluku", String.valueOf(data.getPopulation())));
-        items.add(new DataItem("Väestönlisäys", String.valueOf(data.getPopulationChange())));
+            String iconUrl = "https://openweathermap.org/img/wn/" + iconCode + "@2x.png";
+            InputStream inputStream = new URL(iconUrl).openStream();
+            return BitmapFactory.decodeStream(inputStream);
 
-        items.add(new DataItem(
-                "Työpaikkaomavaraisuus",
-                String.format(Locale.US, "%.1f %%", data.getWorkplaceSelfSufficiency())
-        ));
-
-        items.add(new DataItem(
-                "Työllisyysaste",
-                String.format(Locale.US, "%.1f %%", data.getEmploymentRate())
-        ));
-
-        items.add(new DataItem(
-                "Lämpötila",
-                String.format(Locale.US, "%.1f °C", data.getTemperature())
-        ));
-
-        items.add(new DataItem("Sää", data.getWeatherDescription()));
-        items.add(new DataItem("Sääikonin koodi", data.getWeatherIconCode()));
-
-        return items;
-    }
-
-    private List<DataItem> createErrorItems(Exception e) {
-        List<DataItem> items = new ArrayList<>();
-        items.add(new DataItem("Virhe", e.getMessage()));
-        return items;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

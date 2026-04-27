@@ -1,7 +1,6 @@
 package com.example.dataakansalleliukkonenmikko;
 
 public class WeatherData {
-
     private double temperature;
     private String description;
     private String iconCode;

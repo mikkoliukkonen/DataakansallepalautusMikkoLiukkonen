@@ -73,8 +73,8 @@ public class CompareFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     textViewCompareResult.setText(comparison);
 
-                    searchHistoryManager.saveMunicipality(firstData.getName());
-                    searchHistoryManager.saveMunicipality(secondData.getName());
+                    searchHistoryManager.addMunicipality(firstData.getName());
+                    searchHistoryManager.addMunicipality(secondData.getName());
                 });
 
             } catch (Exception e) {

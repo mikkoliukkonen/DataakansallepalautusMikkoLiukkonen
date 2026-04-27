@@ -4,80 +4,59 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 
 public class WeatherRetriever {
-
     private static final String API_KEY = "ebf1824a427a09c0a8e22f26236b074f";
 
-    public WeatherData getWeatherData(String municipalityName) throws Exception {
-        String encodedMunicipality = URLEncoder.encode(municipalityName, "UTF-8");
-
-        String urlString =
-                "https://api.openweathermap.org/data/2.5/weather?q="
-                        + encodedMunicipality
-                        + ",FI&units=metric&appid="
-                        + API_KEY;
-
-        String json = getJsonFromUrl(urlString);
-
-        JSONObject root = new JSONObject(json);
-
-        JSONObject main = root.getJSONObject("main");
-        double temperature = main.getDouble("temp");
-
-        JSONArray weatherArray = root.getJSONArray("weather");
-        JSONObject weatherObject = weatherArray.getJSONObject(0);
-        String description = weatherObject.getString("description");
-        String iconCode = weatherObject.getString("icon");
-
-        return new WeatherData(temperature, description, iconCode);
-    }
-
-    private String getJsonFromUrl(String urlString) throws Exception {
-        HttpURLConnection connection = null;
-
+    public WeatherData getWeatherData(String municipalityName) {
         try {
+            String encodedMunicipality = URLEncoder.encode(municipalityName + ",FI", "UTF-8");
+
+            String urlString =
+                    "https://api.openweathermap.org/data/2.5/weather?q="
+                            + encodedMunicipality
+                            + "&appid="
+                            + API_KEY
+                            + "&units=metric"
+                            + "&lang=fi";
+
             URL url = new URL(urlString);
-            connection = (HttpURLConnection) url.openConnection();
-
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setRequestProperty("Accept", "application/json");
 
-            int responseCode = connection.getResponseCode();
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream())
+            );
 
-            if (responseCode < 200 || responseCode >= 300) {
-                String error = readResponse(connection.getErrorStream());
-                throw new Exception("OpenWeather API error: " + responseCode + " " + error);
+            StringBuilder response = new StringBuilder();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
             }
 
-            return readResponse(connection.getInputStream());
+            reader.close();
 
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
+            JSONObject jsonObject = new JSONObject(response.toString());
+
+            JSONObject mainObject = jsonObject.getJSONObject("main");
+            double temperature = mainObject.getDouble("temp");
+
+            JSONArray weatherArray = jsonObject.getJSONArray("weather");
+            JSONObject weatherObject = weatherArray.getJSONObject(0);
+
+            String description = weatherObject.getString("description");
+            String iconCode = weatherObject.getString("icon");
+
+            return new WeatherData(temperature, description, iconCode);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new WeatherData(0, "Säätietoa ei saatavilla", "");
         }
-    }
-
-    private String readResponse(InputStream inputStream) throws Exception {
-        if (inputStream == null) {
-            return "";
-        }
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder result = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            result.append(line);
-        }
-
-        reader.close();
-        return result.toString();
     }
 }

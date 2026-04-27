@@ -4,13 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class SearchHistoryManager {
-
     private static final String PREFS_NAME = "search_history_prefs";
-    private static final String KEY_HISTORY = "municipality_history";
+    private static final String KEY_HISTORY = "search_history";
     private static final int MAX_HISTORY_SIZE = 5;
 
     private SharedPreferences sharedPreferences;
@@ -19,38 +16,56 @@ public class SearchHistoryManager {
         sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
-    public void saveMunicipality(String municipalityName) {
-        List<String> history = getHistory();
+    public void addMunicipality(String municipalityName) {
+        ArrayList<String> history = getSearchHistory();
 
-        history.remove(municipalityName);
-        history.add(0, municipalityName);
+        String formattedName = municipalityName.trim().toUpperCase();
 
-        if (history.size() > MAX_HISTORY_SIZE) {
-            history = history.subList(0, MAX_HISTORY_SIZE);
+        history.remove(formattedName);
+        history.add(0, formattedName);
+
+        while (history.size() > MAX_HISTORY_SIZE) {
+            history.remove(history.size() - 1);
         }
 
-        String joinedHistory = String.join(";", history);
-
-        sharedPreferences.edit()
-                .putString(KEY_HISTORY, joinedHistory)
-                .apply();
+        saveSearchHistory(history);
     }
 
-    public List<String> getHistory() {
-        String historyString = sharedPreferences.getString(KEY_HISTORY, "");
+    public void saveMunicipality(String municipalityName) {
+        addMunicipality(municipalityName);
+    }
 
-        List<String> history = new ArrayList<>();
+    public ArrayList<String> getSearchHistory() {
+        String savedHistory = sharedPreferences.getString(KEY_HISTORY, "");
 
-        if (!historyString.isEmpty()) {
-            history.addAll(Arrays.asList(historyString.split(";")));
+        ArrayList<String> history = new ArrayList<>();
+
+        if (!savedHistory.isEmpty()) {
+            String[] municipalities = savedHistory.split(";");
+
+            for (String municipality : municipalities) {
+                if (!municipality.trim().isEmpty()) {
+                    history.add(municipality);
+                }
+            }
         }
 
         return history;
     }
 
-    public void clearHistory() {
+    public ArrayList<String> getHistory() {
+        return getSearchHistory();
+    }
+
+    private void saveSearchHistory(ArrayList<String> history) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (String municipality : history) {
+            stringBuilder.append(municipality).append(";");
+        }
+
         sharedPreferences.edit()
-                .remove(KEY_HISTORY)
+                .putString(KEY_HISTORY, stringBuilder.toString())
                 .apply();
     }
 }
